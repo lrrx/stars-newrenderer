@@ -17,8 +17,6 @@
 
 namespace newstar {
 
-// Host calls this once after making its GL context current,
-// before constructing any newstar objects.
 void initialize();
 
 class StarRenderer {

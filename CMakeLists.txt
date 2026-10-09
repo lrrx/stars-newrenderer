@@ -63,6 +63,6 @@ endif()
 #    PRIVATE NewStarRenderer
 #)
 
-target_include_directories(NewStarRendererTests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
+#target_include_directories(NewStarRendererTests PRIVATE
+#    ${CMAKE_CURRENT_SOURCE_DIR}/src
+#)

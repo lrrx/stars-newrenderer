@@ -9,8 +9,8 @@
 
 std::unique_ptr<newstar::StarRenderer> starRenderer;
 
+//assumes that gl context already exists
 void newstarInit(glm::uvec2 screenSize) {
-    //init gl function pointers
     newstar::initialize();
     newstar::initializeLogState(
         [](std::string const& s){std::cout << s << std::endl;},

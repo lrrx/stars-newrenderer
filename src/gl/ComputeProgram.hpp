@@ -68,8 +68,8 @@ private:
     int locationOf(std::string_view name);
     void releaseGL() noexcept;
 
-    std::string mPath;
     uint32_t mProgram = 0;
+    std::string mPath;
 
     // string_view keys are safe here because we always insert with an
     // owned std::string (see locationOf); the transparent hash lets us

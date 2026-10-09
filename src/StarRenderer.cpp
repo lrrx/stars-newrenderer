@@ -40,6 +40,9 @@ void initialize() {
     if (!version) {
         throw std::runtime_error("newstar: gladLoaderLoadGLContext failed");
     }
+
+    ::newstar::log() << "newstar: glad initialized" << std::endl;
+
     return;
 }
 

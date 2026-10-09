@@ -1,4 +1,5 @@
 #pragma once
+
 #include <glad/gl.h> 
 
 namespace newstar::detail {
