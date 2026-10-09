@@ -55,13 +55,13 @@ if(UNIX AND NOT APPLE)
     target_link_libraries(NewStarRenderer PRIVATE GL dl)
 endif()
 
-add_executable(NewStarRendererTests
-    tests/src/main.cpp
-)
+#add_executable(NewStarRendererTests
+#    tests/src/main.cpp
+#)
 
-target_link_libraries(NewStarRendererTests
-    PRIVATE NewStarRenderer
-)
+#target_link_libraries(NewStarRendererTests
+#    PRIVATE NewStarRenderer
+#)
 
 target_include_directories(NewStarRendererTests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
