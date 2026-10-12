@@ -20,7 +20,7 @@
 #include "preprocessing/gpu_datatypes.hpp"
 #include "preprocessing/preprocessing.hpp"
 
-//#define REBUILD_CACHE
+#define REBUILD_CACHE
 
 #ifdef REBUILD_CACHE
 #include "stars/stars.hpp"
@@ -133,9 +133,9 @@ mDebugVisualsProgram{"debugvisuals.comp", {
 void StarRenderer::preprocessStars(std::vector<RawStar> const& rawStars) {
     //TODOR: decide cache rebuild at runtime (by checking file date, size maybe) instead of compiletime ifdef
 #ifdef REBUILD_CACHE //TODOR: preprocessing csv -> .cache, .cache -> .bin all in cosmoscout, for user accessibility
-    std::vector<RawStar> rs{};
+    std::vector<RawStar> const& rs = rawStars;
     ::newstar::log() << "reading cache" << std::endl;
-    stars::readStarCache("full_gaia_stars_icrs.cache", rs, true);
+    //stars::readStarCache("full_gaia_stars_icrs.cache", rs, true);
     ::newstar::log() << "rs.size() " << rs.size() << std::endl;
 
     std::vector<GpuChunkMeta> gpuChunkMetas;
@@ -310,7 +310,7 @@ void StarRenderer::run(
         mRasterProgram.setMat4("uMatModel", icrsCorrectionMatrix);
         mRasterProgram.setUint("uStartLayer", 0u);
         mRasterProgram.setUint("uLayerCount", static_cast<uint32_t>(GPU_MAX_JOB_CHUNKS));
-        ::newstar::log() << "newrenderer uniform: " << luminanceMultiplicator << std::endl;
+        //::newstar::log() << "newrenderer uniform: " << luminanceMultiplicator << std::endl;
         mRasterProgram.setFloat("uLuminanceMultiplicator", luminanceMultiplicator * mConfig.raster.DEBUG_LUMI_FACTOR);
 
         //indirect dispatch

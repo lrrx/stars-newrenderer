@@ -9,7 +9,8 @@
 
 #include "gl_context.hpp"
 
-#include <StaticConfig.hpp>
+#include <StaticGlobalConfig.hpp>
+
 #include <log/log.hpp>
 
 // Simple SSBO wrapper with RAII, since we need to create a lot of SSBOs for the star render pipeline
@@ -35,7 +36,7 @@ public:
         static_assert(std::is_trivially_copyable_v<T>, "SSBO data must be trivially copyable");
         
         if(cacheFilename.length() > 0) {   
-            std::string const fullCachePath = newstar::static_config::CACHE_BASE_PATH + cacheFilename;
+            std::string const fullCachePath = newstar::staticGlobalConfig().CACHE_BASE_PATH + cacheFilename;
             std::ofstream out(fullCachePath, std::ios::binary);
             if (!out) throw std::runtime_error("Failed to open file for writing: " + fullCachePath);
             out.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(T));
@@ -77,7 +78,7 @@ public:
     void loadFromFile(std::string filename, GLenum usage) {
         static_assert(std::is_trivially_copyable_v<T>, "SSBO data must be trivially copyable");
 
-        std::string const fullFilePath = newstar::static_config::CACHE_BASE_PATH + filename;
+        std::string const fullFilePath = newstar::staticGlobalConfig().CACHE_BASE_PATH + filename;
         ::newstar::log() << fullFilePath << std::endl;
 
         std::ifstream in(fullFilePath, std::ios::binary | std::ios::ate);

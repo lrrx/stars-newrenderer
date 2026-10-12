@@ -20,7 +20,7 @@
 
 #include <RawStar.hpp>
 
-#include <StaticConfig.hpp>
+#include <StaticGlobalConfig.hpp>
 
 // GLM_PI for consistency
 #ifndef GLM_PI
@@ -206,7 +206,7 @@ namespace stars {
 bool loadFromGaiaCSV(const std::string& filename) {
     std::vector<RawStar> stars;
 
-    std::string filepath = newstar::static_config::CACHE_BASE_PATH + filename;
+    std::string filepath = newstar::staticGlobalConfig().CACHE_BASE_PATH + filename;
 
     std::ifstream file;
     file.open(filepath.c_str(), std::ifstream::in);
@@ -299,7 +299,7 @@ inline glm::vec3 icrsToGalactic(const glm::vec3& v) {
 }
 
 bool readStarCache(const std::string& filename, std::vector<RawStar>& out, bool transform_ICRS_to_galactic) {
-    std::string filepath = newstar::static_config::CACHE_BASE_PATH + filename;
+    std::string filepath = newstar::staticGlobalConfig().CACHE_BASE_PATH + filename;
 
     std::ifstream file;
     file.open(filepath.c_str(), std::ios::in | std::ios::binary | std::ios::ate);

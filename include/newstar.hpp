@@ -1,7 +1,7 @@
 #pragma once
 
 #include <glm/glm.hpp>
-#include <array>
+#include <string>
 #include <vector>
 #include <RawStar.hpp>
 
@@ -50,7 +50,7 @@ struct StarRendererConfig {
 };
 
 //TODOR: remove maybe since boilerplate? <-klären
-void newstarInit(glm::uvec2 screenSize);
+void newstarInit(glm::uvec2 const& screenSize, std::string const& shaderBasePath, std::string const& cacheBasePath);
 void newstarSetdata(std::vector<RawStar> const& rawStars);
 void newstarRender(
     glm::mat4 modelViewMatrix,

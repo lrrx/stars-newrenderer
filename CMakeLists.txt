@@ -39,6 +39,7 @@ add_library(NewStarRenderer
     src/log/log.hpp
     src/log/log.cpp
     src/gl/ComputeProgram.cpp
+    src/StaticGlobalConfig.cpp
 )
 
 target_include_directories(NewStarRenderer
