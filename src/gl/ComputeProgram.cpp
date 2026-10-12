@@ -45,7 +45,7 @@ int ComputeProgram::locationOf(std::string_view uniformName) {
     if (loc == -1) {
         ::newstar::err() << "ComputeProgram:" << mPath
                   << "] warning: uniform '" << owned
-                  << "' not found (unused or optimized out)\n";
+                  << "' not found (unused or optimized out)";
     }
     uniformCache_.emplace(owned, loc);
     return loc;
