@@ -20,6 +20,7 @@
 #include <glm/gtx/component_wise.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+namespace newstar {
 
 // pack 10 lowest bits of each uint x y z component as |2|10|10|10| (the highest 2 bits are unused)
 inline static uint32_t pack10(glm::u32vec3 const& v) {
@@ -123,3 +124,5 @@ struct QuantizedChunk {
         std::vector<GpuChunkMeta>& chunkMetaOut
     );
 };
+
+} //namespace newstar

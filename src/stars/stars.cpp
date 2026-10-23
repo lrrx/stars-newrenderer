@@ -1,6 +1,5 @@
 #include "stars.hpp"
 #include "log/log.hpp"
-#include <StaticConfig.hpp>
 
 #include <sstream>
 #include <fstream>

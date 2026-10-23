@@ -19,6 +19,8 @@
 
 #include <log/log.hpp>
 
+namespace newstar {
+
 namespace {
 
 static inline size_t starsOOB = 0;
@@ -31,7 +33,7 @@ void binStarsToChunks(std::vector<RawStar> const& raw_stars, std::unordered_map<
     std::unordered_map<uint32_t, RawChunk> chunksInternal;
     
     for(RawStar const& raw_star : raw_stars) {
-        glm::vec3 const globalChunkSpacePosition = raw_star.mPosition / newstar::static_config::CHUNK_SIZE_PARSECS;
+        glm::vec3 const globalChunkSpacePosition = raw_star.mPosition / scfg_h::CHUNK_SIZE_PARSECS;
         if(glm::length(globalChunkSpacePosition) < 0.0001) continue; //filter out "erroneous"(?) stars very close to center landing on 0,0,0, causing perf. spike
 
         glm::vec3 const chunkCoordFloored = glm::floor(globalChunkSpacePosition);
@@ -95,7 +97,7 @@ void buildChunkLevels(
 
         //REVEAL(waste of memory fetches if preprocessing doesnt redistribute padding stars into less dense chunks, see rasterize.comp PADDING_STAR=0xffffffff side too)
 
-        size_t starCountAligned = chunk.stars.size() - chunk.stars.size() % newstar::static_config::GPU_THREAD_COUNT;
+        size_t starCountAligned = chunk.stars.size() - chunk.stars.size() % scfg_h::GPU_THREAD_COUNT;
         QuantizedChunk quantizedChunk{chunk.stars, starCountAligned, chunk.globalPosEncoded, 1};
         quantizedChunk.gpuSerialize(gpuBatchRows, gpuBatchRowsHighPrecision, gpuChunkMetasOut);
 
@@ -134,7 +136,7 @@ void serializeAndFlattenChunks(
 
     for(auto const& gpuBatchRow : gpuBatchRows) {
         //serialize main batch table
-        for(size_t i = 0; i < newstar::static_config::GPU_THREAD_COUNT; i++) {
+        for(size_t i = 0; i < scfg_h::GPU_THREAD_COUNT; i++) {
             gpuBatchRowsFlatOut.push_back(gpuBatchRow[i * 2 + 0]);
             gpuBatchRowsFlatOut.push_back(gpuBatchRow[i * 2 + 1]);
         }
@@ -142,7 +144,7 @@ void serializeAndFlattenChunks(
 
     for(auto const& rowHighP : gpuBatchRowsHighPrecision) {
         //serialize main batch table
-        for(size_t i = 0; i < newstar::static_config::GPU_THREAD_COUNT; i++) {
+        for(size_t i = 0; i < scfg_h::GPU_THREAD_COUNT; i++) {
             gpuBatchRowsHighPrecisionFlatOut.push_back(rowHighP[i]);
         }
     }
@@ -171,8 +173,6 @@ void countPaddingZerosDebug(std::vector<GpuBatchRow> const& gpuBatchRows,
 }
 
 } // namespace
-
-namespace newstar {
 
 namespace preprocessing {
 

@@ -9,6 +9,8 @@
 #include "gpu_datatypes.hpp"
 #include <log/log.hpp>
 
+namespace newstar {
+
 namespace {
 
 // Combine stars sharing an encoded position into one point source.
@@ -135,7 +137,7 @@ void QuantizedChunk::gpuSerialize(
     size_t writeIdx = 0; // running output star index, decoupled from input idx
 
     auto emitStar = [&](uint32_t pos, uint32_t posHighPrecision, float mag, float temp) {
-        size_t thread = writeIdx % newstar::static_config::GPU_THREAD_COUNT;
+        size_t thread = writeIdx % scfg_h::GPU_THREAD_COUNT;
         if (thread == 0) batchRowsOut.emplace_back();   // start new row on boundary
         GpuBatchRow& row = batchRowsOut.back();
 
@@ -156,8 +158,8 @@ void QuantizedChunk::gpuSerialize(
     mergeStarsByPosition(quantizedStars, emitStar);
 
     // Pad tail of last row up to the 256-thread boundary.
-    while (writeIdx % newstar::static_config::GPU_THREAD_COUNT != 0) {
-        size_t thread = writeIdx % newstar::static_config::GPU_THREAD_COUNT;
+    while (writeIdx % scfg_h::GPU_THREAD_COUNT != 0) {
+        size_t thread = writeIdx % scfg_h::GPU_THREAD_COUNT;
         GpuBatchRow& row = batchRowsOut.back();
         GpuBatchRow& rowHighPrecision = highPrecisionBatchRowsOut.back();
         row[thread * 2 + 0] = PADDING_STAR;
@@ -184,3 +186,5 @@ void QuantizedChunk::gpuSerialize(
         meta.pad0        = 0;
     }
 }
+
+} //namespace newstar
