@@ -1,9 +1,9 @@
 #pragma once
 
+#include <StaticGlobalConfig.hpp>
 #include <cstdint>
 #include <cstdlib>
 #include <array>
-#include <StaticConfig.hpp>
 
 //#pragma pack(push, 1)
 
@@ -33,4 +33,4 @@ struct GpuProfilingStruct {
 //#pragma pack(pop)
 
 //for format where first uint32_t encodes position and second uint32_t encodes lumi-temp (interleaved)
-using GpuBatchRow = std::array<uint32_t, newstar::static_config::GPU_THREAD_COUNT * 2>;
+using GpuBatchRow = std::array<uint32_t, newstar::StaticGlobalConfig::hardcoded::GPU_THREAD_COUNT * 2>;

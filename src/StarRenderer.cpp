@@ -1,4 +1,5 @@
 #include "StarRenderer.hpp"
+#include <StaticGlobalConfig.hpp>
 #include "newstar.hpp"
 #include <cstdlib>
 #include <optional>
@@ -46,34 +47,18 @@ void initialize() {
     return;
 }
 
-// if greater than 1, we create multiple copies of the screen buffer and distribute writes accross them (uniformly random) when rasterizing to the screen
-// due to how memory banks work, this should not have any major impact (couldn't measure any, except perhaps worse if too large)
-constexpr size_t GPU_ACCUMULATION_LANES = 2;
-
-// for tile-based rendering, the screen is divided into x * y tiles of GPU_TILE_SIZE_PX px size
-constexpr size_t GPU_TILE_SIZE_PX = 64;
-
-// max chunks bundled per job. With MAX_CHUNK_ROWS = 8 on the CPU side
-// (see datatypes.cpp gpuSerialize), peak rows per job = 8 * 16 = 128.
-constexpr size_t GPU_MAX_JOB_CHUNKS = 10;
-
-// total jobs across the screen per frame (primaries + overflow). Sized so the
-// SSBO is the source of truth for capacity; the shaders' MAX_JOBS define and
-// the buffer allocation both derive from this.
-constexpr size_t GPU_MAX_JOBS = 100000;
-
 /*double pixel_world_space_width(double dist) {
     return 2.0 * dist / (960.0); //tan(45°) = 1
 }*/ //TODO: use this to generate dynamic LOD levels, for now we assume fixed precision
 
 std::unordered_map<std::string, std::optional<size_t>> StarRenderer::drawListDefines() const {
     return {
-        {"MAX_JOB_CHUNKS", GPU_MAX_JOB_CHUNKS}, //TODOR: pass non-debug-code constants as uniforms to avoid recompilation on screen resize
-        {"TILE_SIZE", GPU_TILE_SIZE_PX}, //TODOR: compare performance between both approaches
+        {"MAX_JOB_CHUNKS", scfg_h::GPU_MAX_JOB_CHUNKS}, //TODOR: pass non-debug-code constants as uniforms to avoid recompilation on screen resize
+        {"TILE_SIZE", scfg_h::GPU_TILE_SIZE_PX}, //TODOR: compare performance between both approaches
         {"NUM_PRIMARY_TILES", mTileCount_flat},
         {"TILES_X", mTileCount.x},
         {"TILES_Y", mTileCount.y},
-        {"MAX_JOBS", GPU_MAX_JOBS},
+        {"MAX_JOBS", scfg_h::GPU_MAX_JOBS},
         {"HIGH_LOD_PX_THRESHOLD", mConfig.drawlist.HIGH_LOD_PX_THRESHOLD},
         {mConfig.drawlist.DEBUG_GRID_OVERLAY ? "DEBUG_GRID_OVERLAY" : "", std::nullopt},
         {mConfig.drawlist.DEBUG_VISUALIZE_BINNING ? "DEBUG_VISUALIZE_BINNING" : "", std::nullopt},
@@ -84,13 +69,13 @@ std::unordered_map<std::string, std::optional<size_t>> StarRenderer::drawListDef
 
 std::unordered_map<std::string, std::optional<size_t>> StarRenderer::rasterDefines() const {
     return {
-        {"MAX_JOB_CHUNKS", GPU_MAX_JOB_CHUNKS}, //TODOR: pass non-debug-code constants as uniforms to avoid recompilation on screen resize
-        {"THREAD_COUNT", newstar::static_config::GPU_THREAD_COUNT},
-        {"TILE_SIZE", GPU_TILE_SIZE_PX},
+        {"MAX_JOB_CHUNKS", scfg_h::GPU_MAX_JOB_CHUNKS}, //TODOR: pass non-debug-code constants as uniforms to avoid recompilation on screen resize
+        {"THREAD_COUNT", scfg_h::GPU_THREAD_COUNT},
+        {"TILE_SIZE", scfg_h::GPU_TILE_SIZE_PX},
         {"TILES_X", mTileCount.x},
         {"TILES_Y", mTileCount.y},
-        {"MAX_JOBS", GPU_MAX_JOBS},
-        {"ACCUMULATION_LANES", GPU_ACCUMULATION_LANES}, //TODOR: comment or delete (not required from how memory banks work)
+        {"MAX_JOBS", scfg_h::GPU_MAX_JOBS},
+        {"ACCUMULATION_LANES", scfg_h::GPU_ACCUMULATION_LANES}, //TODOR: comment or delete (not required from how memory banks work)
         {mConfig.raster.RASTERIZE_USE_TILE_ACCUMULATION ? "RASTERIZE_USE_TILE_ACCUMULATION" : "", std::nullopt},
         {mConfig.raster.WRITE_PROFILING_COUNTERS ? "WRITE_PROFILING_COUNTERS" : "", std::nullopt},
         {mConfig.raster.ENABLE_LUMI_THRESHOLD ? "ENABLE_LUMI_THRESHOLD" : "", std::nullopt},
@@ -99,24 +84,24 @@ std::unordered_map<std::string, std::optional<size_t>> StarRenderer::rasterDefin
 
 StarRenderer::StarRenderer(glm::uvec2 const& screenSize)
 : mScreenSize{screenSize},
-mTileCount{glm::uvec2(glm::ceil(glm::vec2(mScreenSize) / glm::vec2(GPU_TILE_SIZE_PX)))},
+mTileCount{glm::uvec2(glm::ceil(glm::vec2(mScreenSize) / glm::vec2(scfg_h::GPU_TILE_SIZE_PX)))},
 mTileCount_flat{mTileCount.x * mTileCount.y},
 mConfig{},
 mClearProgram{"clear.comp", {}},
 mDrawListClearProgram{"drawlist_clear.comp", {
-            {"MAX_JOB_CHUNKS", GPU_MAX_JOB_CHUNKS},
+            {"MAX_JOB_CHUNKS", scfg_h::GPU_MAX_JOB_CHUNKS},
             {"NUM_PRIMARY_TILES", mTileCount_flat}
         }},
 mDrawListProgram{"drawlist.comp", drawListDefines()},
 mRasterProgram{"rasterize.comp", rasterDefines()},
 mDebugStatsProgram{"debugstats.comp", {}},
 mDebugVisualsProgram{"debugvisuals.comp", {
-        {"MAX_JOB_CHUNKS", GPU_MAX_JOB_CHUNKS},
+        {"MAX_JOB_CHUNKS", scfg_h::GPU_MAX_JOB_CHUNKS},
         {"NUM_PRIMARY_TILES", mTileCount_flat},
-        {"TILE_SIZE", GPU_TILE_SIZE_PX}
+        {"TILE_SIZE", scfg_h::GPU_TILE_SIZE_PX}
     }},
  mAccumulationTexture{(mScreenSize * glm::uvec2(2,1) //TODOR: comment?
-     * glm::uvec2(1, GPU_ACCUMULATION_LANES)), GpuTexture::Format::R32F}, //TODOR for COMMENT: twice as wide, interleaved 2-value storage
+     * glm::uvec2(1, scfg_h::GPU_ACCUMULATION_LANES)), GpuTexture::Format::R32F}, //TODOR for COMMENT: twice as wide, interleaved 2-value storage
  mFrameTexture{(mScreenSize), GpuTexture::Format::RGBA8}
 {
     {
@@ -170,9 +155,9 @@ void StarRenderer::prepareGpuBuffers() {
     GL.BindBuffer(GL_SHADER_STORAGE_BUFFER, mGpuJobsSSBO);
     // Each Job = 16 B header (count, id_per_tile, tileID_flat, pad)
     //          + 16 B per ChunkMeta entry * GPU_MAX_JOB_CHUNKS.
-    size_t const jobStrideBytes = 16 + 16 * GPU_MAX_JOB_CHUNKS;
+    size_t const jobStrideBytes = 16 + 16 * scfg_h::GPU_MAX_JOB_CHUNKS;
     GL.BufferData(GL_SHADER_STORAGE_BUFFER,
-        jobStrideBytes * GPU_MAX_JOBS * 10,
+        jobStrideBytes * scfg_h::GPU_MAX_JOBS * 10,
         nullptr, GL_DYNAMIC_COPY);
 
     GL.GenBuffers(1, &mGpuProfilingSSBO);
@@ -180,7 +165,7 @@ void StarRenderer::prepareGpuBuffers() {
     GL.BufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GpuProfilingStruct),
                 nullptr, GL_DYNAMIC_READ);
 
-    size_t accumElems = size_t(mScreenSize.x) * 2 * size_t(mScreenSize.y) * GPU_ACCUMULATION_LANES;
+    size_t accumElems = size_t(mScreenSize.x) * 2 * size_t(mScreenSize.y) * scfg_h::GPU_ACCUMULATION_LANES;
     GL.GenBuffers(1, &mGpuAccumSSBO);
     GL.BindBuffer(GL_SHADER_STORAGE_BUFFER, mGpuAccumSSBO);
     GL.BufferData(GL_SHADER_STORAGE_BUFFER, accumElems * sizeof(int32_t), nullptr, GL_DYNAMIC_COPY);    
@@ -256,7 +241,7 @@ void StarRenderer::run(
         mDrawListProgram.bind();
         mDrawListProgram.setFloat("uTime", static_cast<float>(util::time_now() - t_start));
         mDrawListProgram.setUint("uChunkCount", static_cast<uint32_t>(mChunkCount));
-        mDrawListProgram.setFloat("uChunkSize", static_config::CHUNK_SIZE_PARSECS);
+        mDrawListProgram.setFloat("uChunkSize", scfg_h::CHUNK_SIZE_PARSECS);
         mDrawListProgram.setIVec2("uResolution", glm::ivec2{mScreenSize});
         mDrawListProgram.setUint("uShowMask", mConfig.drawlist.CHUNK_SHOW_MASK);
         mDrawListProgram.setUint("uMAX_JOB_WORK", mConfig.drawlist.MAX_JOB_WORK);
@@ -289,7 +274,7 @@ void StarRenderer::run(
         mDebugVisualsProgram.setIVec2("uResolution", glm::ivec2{mScreenSize});
         // Chunk count that saturates the heatmap. 4 chains deep is a useful
         // default: green = primary fits, yellow = some overflow, red = hot.
-        mDebugVisualsProgram.setUint("uWorkloadFullChunks", static_cast<uint32_t>(4 * GPU_MAX_JOB_CHUNKS));
+        mDebugVisualsProgram.setUint("uWorkloadFullChunks", static_cast<uint32_t>(4 * scfg_h::GPU_MAX_JOB_CHUNKS));
         GL.DispatchCompute(GLuint((mTileCount_flat + 63) / 64), 1, 1);
         GL.MemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         sw.endTiming("debugworkload");
@@ -304,12 +289,12 @@ void StarRenderer::run(
         mRasterProgram.setUint("uLumiThresholdEnabled", static_cast<uint32_t>(mConfig.raster.LUMI_THRESHOLD_ENABLED));
         mRasterProgram.setVec3("uObserverPosWorld", cameraPosParsec);
         mRasterProgram.setIVec2("uResolution", glm::ivec2{mScreenSize});
-        mRasterProgram.setFloat("uChunkSize", newstar::static_config::CHUNK_SIZE_PARSECS);
+        mRasterProgram.setFloat("uChunkSize", scfg_h::CHUNK_SIZE_PARSECS);
         mRasterProgram.setMat4("uViewProj", uViewProj);
         mRasterProgram.setMat4("uInvP", uInvP);
         mRasterProgram.setMat4("uMatModel", icrsCorrectionMatrix);
         mRasterProgram.setUint("uStartLayer", 0u);
-        mRasterProgram.setUint("uLayerCount", static_cast<uint32_t>(GPU_MAX_JOB_CHUNKS));
+        mRasterProgram.setUint("uLayerCount", static_cast<uint32_t>(scfg_h::GPU_MAX_JOB_CHUNKS));
         //::newstar::log() << "newrenderer uniform: " << luminanceMultiplicator << std::endl;
         mRasterProgram.setFloat("uLuminanceMultiplicator", luminanceMultiplicator * mConfig.raster.DEBUG_LUMI_FACTOR);
 
