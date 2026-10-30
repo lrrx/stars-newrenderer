@@ -42,6 +42,15 @@ GpuTexture::~GpuTexture() {
     GL.DeleteTextures(1, &mHandle);
 }
 
+void GpuTexture::resize(glm::uvec2 const& newSize) {
+    if (newSize == mSize) return;
+    FormatProperties const& sp = setupDefinitions.at(mFormat);
+    GL.BindTexture(GL_TEXTURE_2D, mHandle);
+    GL.TexImage2D(GL_TEXTURE_2D, 0, sp.internalFormat, newSize.x, newSize.y, 0, sp.format, sp.type, nullptr);
+    GL.BindTexture(GL_TEXTURE_2D, 0);
+    mSize = newSize;
+}
+
 GLuint GpuTexture::handle() const {
     return mHandle;
 }

@@ -60,6 +60,8 @@ void newstarRender(
     float luminanceMultiplicator,
     bool hdrEnabled);
 
+void newstarResizeWindow(glm::uvec2 windowSize);
+
 StarRendererConfig& newstarConfig();
 
 void newstarDeInit();

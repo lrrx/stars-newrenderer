@@ -10,6 +10,7 @@ struct StaticGlobalConfig {
 
     StaticGlobalConfig(std::string const& shaderBasePath, std::string const& cacheBasePath);
 
+    //TODOR: make these externally configurable (at initialization) instead of them being compile time constants (piece by peace, clean refactoring)
     struct hardcoded {
         //--- FIXED GPU CONFIG ---
         //TODOR: mark constant as used for rasterization
