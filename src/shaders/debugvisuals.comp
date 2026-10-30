@@ -104,9 +104,9 @@ void main() {
     uint tile = gl_GlobalInvocationID.x;
     if (tile >= uint(NUM_PRIMARY_TILES)) return;
 
-    ivec2 tileCounts = ivec2(uResolution) / int(TILE_SIZE);
-    if (tileCounts.x <= 0) return;
-    ivec2 tileXY     = ivec2(tile % uint(tileCounts.x), tile / uint(tileCounts.x));
+    // TILES_X is the ceil()ed tile grid width from the host, matching drawlist/rasterize.
+    // (floor(uResolution / TILE_SIZE) would mis-map tiles when the size isn't a multiple of TILE_SIZE.)
+    ivec2 tileXY     = ivec2(tile % uint(TILES_X), tile / uint(TILES_X));
     ivec2 base       = tileXY * int(TILE_SIZE);
 
     // Total chunks binned to this tile, read in O(1) off the tip job:

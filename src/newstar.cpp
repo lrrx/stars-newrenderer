@@ -47,6 +47,12 @@ void newstarRender(
         hdrEnabled);
 }
 
+void newstarResizeWindow(
+    glm::uvec2 windowSize
+) {
+    starRenderer->resize(windowSize);
+}
+
 StarRendererConfig& newstarConfig() {
     return starRenderer->config();
 }

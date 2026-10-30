@@ -82,27 +82,48 @@ std::unordered_map<std::string, std::optional<size_t>> StarRenderer::rasterDefin
     };
 }
 
+namespace {
+glm::uvec2 computeTileCount(glm::uvec2 const& screenSize) {
+    uint32_t const t = static_cast<uint32_t>(scfg_h::GPU_TILE_SIZE_PX);
+    return (screenSize + glm::uvec2(t - 1u)) / glm::uvec2(t); //ceil division
+}
+}
+
+// Accumulation texture: twice as wide (interleaved 2-value storage: weighted temperature + luminance),
+// stacked GPU_ACCUMULATION_LANES times vertically.
+glm::uvec2 StarRenderer::accumulationTextureSize() const {
+    return (mScreenSize * glm::uvec2(2, 1)) * glm::uvec2(1, scfg_h::GPU_ACCUMULATION_LANES);
+}
+
+std::unordered_map<std::string, std::optional<size_t>> StarRenderer::drawListClearDefines() const {
+    return {
+        {"MAX_JOB_CHUNKS", scfg_h::GPU_MAX_JOB_CHUNKS},
+        {"NUM_PRIMARY_TILES", mTileCount_flat}
+    };
+}
+
+std::unordered_map<std::string, std::optional<size_t>> StarRenderer::debugVisualsDefines() const {
+    return {
+        {"MAX_JOB_CHUNKS", scfg_h::GPU_MAX_JOB_CHUNKS},
+        {"NUM_PRIMARY_TILES", mTileCount_flat},
+        {"TILES_X", mTileCount.x},
+        {"TILE_SIZE", scfg_h::GPU_TILE_SIZE_PX}
+    };
+}
+
 StarRenderer::StarRenderer(glm::uvec2 const& screenSize)
 : mScreenSize{screenSize},
-mTileCount{glm::uvec2(glm::ceil(glm::vec2(mScreenSize) / glm::vec2(scfg_h::GPU_TILE_SIZE_PX)))},
-mTileCount_flat{mTileCount.x * mTileCount.y},
+mTileCount{computeTileCount(mScreenSize)},
+mTileCount_flat{size_t(mTileCount.x) * mTileCount.y},
 mConfig{},
 mClearProgram{"clear.comp", {}},
-mDrawListClearProgram{"drawlist_clear.comp", {
-            {"MAX_JOB_CHUNKS", scfg_h::GPU_MAX_JOB_CHUNKS},
-            {"NUM_PRIMARY_TILES", mTileCount_flat}
-        }},
+mDrawListClearProgram{"drawlist_clear.comp", drawListClearDefines()},
 mDrawListProgram{"drawlist.comp", drawListDefines()},
 mRasterProgram{"rasterize.comp", rasterDefines()},
 mDebugStatsProgram{"debugstats.comp", {}},
-mDebugVisualsProgram{"debugvisuals.comp", {
-        {"MAX_JOB_CHUNKS", scfg_h::GPU_MAX_JOB_CHUNKS},
-        {"NUM_PRIMARY_TILES", mTileCount_flat},
-        {"TILE_SIZE", scfg_h::GPU_TILE_SIZE_PX}
-    }},
- mAccumulationTexture{(mScreenSize * glm::uvec2(2,1) //TODOR: comment?
-     * glm::uvec2(1, scfg_h::GPU_ACCUMULATION_LANES)), GpuTexture::Format::R32F}, //TODOR for COMMENT: twice as wide, interleaved 2-value storage
- mFrameTexture{(mScreenSize), GpuTexture::Format::RGBA8}
+mDebugVisualsProgram{"debugvisuals.comp", debugVisualsDefines()},
+ mAccumulationTexture{accumulationTextureSize(), GpuTexture::Format::R32F},
+ mFrameTexture{mScreenSize, GpuTexture::Format::RGBA8}
 {
     {
         mScreenQuadProgram = createProgramFromFiles("quad_blit.vert", "quad_blit.frag");
@@ -141,16 +162,53 @@ void StarRenderer::preprocessStars(std::vector<RawStar> const& rawStars) {
     mChunkCount = mGpuChunkMetaSSBO.count();
 }
 
-void StarRenderer::prepareGpuBuffers() {
-    GL.GenVertexArrays(1, &mScreenQuadVAOHandle);
-
-    {    
+// Buffers whose size depends on the screen size / tile grid.
+void StarRenderer::allocateScreenDependentBuffers() {
+    {
         // 16 B indirect-dispatch header (x,y,z,pad) + one tip pointer per primary tile.
         // The binning shader uses dh.tip_pointers[tileID_flat] to find each tile's
         // current write target, so the array must be sized to NUM_PRIMARY_TILES.
         size_t headerBytes = 16 + mTileCount_flat * sizeof(uint32_t);
         mGpuDispatchHeaderSSBO.allocateEmpty(headerBytes, GL_DYNAMIC_DRAW);
     }
+
+    {
+        size_t accumElems = size_t(mScreenSize.x) * 2 * size_t(mScreenSize.y) * scfg_h::GPU_ACCUMULATION_LANES;
+        mGpuAccumSSBO.allocateEmpty(accumElems * sizeof(int32_t), GL_DYNAMIC_COPY);
+    }
+}
+
+void StarRenderer::resize(glm::uvec2 const& newScreenSize) {
+    if (newScreenSize.x == 0 || newScreenSize.y == 0) return; //minimized window, keep current resources
+    if (newScreenSize == mScreenSize) return;
+
+    mScreenSize = newScreenSize;
+    mTileCount = computeTileCount(mScreenSize);
+    mTileCount_flat = size_t(mTileCount.x) * mTileCount.y;
+
+    //textures (same handles, new storage)
+    mAccumulationTexture.resize(accumulationTextureSize());
+    mFrameTexture.resize(mScreenSize);
+
+    //SSBOs (only once the initial allocation happened; otherwise prepareGpuBuffers() will use the new size)
+    if (mBuffersPrepared) {
+        allocateScreenDependentBuffers();
+    }
+
+    //shaders whose #defines encode tile grid dimensions
+    mDrawListClearProgram.recompileFromFile("drawlist_clear.comp", drawListClearDefines());
+    mDrawListProgram.recompileFromFile("drawlist.comp", drawListDefines());
+    mRasterProgram.recompileFromFile("rasterize.comp", rasterDefines());
+    mDebugVisualsProgram.recompileFromFile("debugvisuals.comp", debugVisualsDefines());
+
+    ::newstar::log() << "newstar: resized to " << mScreenSize.x << "x" << mScreenSize.y
+                     << " (" << mTileCount.x << "x" << mTileCount.y << " tiles)" << std::endl;
+}
+
+void StarRenderer::prepareGpuBuffers() {
+    GL.GenVertexArrays(1, &mScreenQuadVAOHandle);
+
+    allocateScreenDependentBuffers();
 
     // Each Job = 16 B header (count, id_per_tile, tileID_flat, pad)
     //          + 16 B per ChunkMeta entry * GPU_MAX_JOB_CHUNKS.
@@ -160,11 +218,8 @@ void StarRenderer::prepareGpuBuffers() {
     }
 
     mGpuProfilingSSBO.allocateEmpty(sizeof(GpuProfilingStruct), GL_DYNAMIC_READ);
-    
-    {
-        size_t accumElems = size_t(mScreenSize.x) * 2 * size_t(mScreenSize.y) * scfg_h::GPU_ACCUMULATION_LANES;
-        mGpuAccumSSBO.allocateEmpty(accumElems * sizeof(int32_t), GL_DYNAMIC_COPY);    
-    }
+
+    mBuffersPrepared = true;
 }
 
 void StarRenderer::run(

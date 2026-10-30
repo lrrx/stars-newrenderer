@@ -22,9 +22,16 @@ void initialize();
 class StarRenderer {
 public:
     //TODO add chunk size as test parameter (limit not on distance in chunks, but in parsecs)
-    StarRenderer(glm::uvec2 const& screenSize); //TODO: pass this to renderer as well, handle necessary texture update there
+    StarRenderer(glm::uvec2 const& screenSize);
     void preprocessStars(std::vector<RawStar> const& rawStars);
     void prepareGpuBuffers();
+
+    //Call when the viewport size changes (before the next run()). Reallocates all
+    //screen-size dependent textures/buffers and recompiles the shaders whose
+    //#defines encode the tile grid. Zero-sized requests (e.g. minimized window) are ignored.
+    //The caller remains responsible for glViewport of the final composition pass.
+    void resize(glm::uvec2 const& newScreenSize);
+    glm::uvec2 const& screenSize() const { return mScreenSize; }
 
     StarRendererConfig& config();
 
@@ -40,10 +47,11 @@ public:
     );
 
 private:
-    glm::uvec2 const mScreenSize; //TODO: handle viewport resizing
-    glm::uvec2 const mTileCount;
-    size_t const mTileCount_flat;
-    size_t mChunkCount;
+    glm::uvec2 mScreenSize;
+    glm::uvec2 mTileCount;
+    size_t mTileCount_flat;
+    size_t mChunkCount = 0;
+    bool mBuffersPrepared = false;
 
     StarRendererConfig mConfig;
     StarRendererConfig mPreviousFrameConfig;
@@ -77,6 +85,12 @@ private:
 private:
     void recompileDrawListProgram();
     void recompileRasterProgram();
+
+    //(re)allocate the buffers whose size depends on screen size / tile count
+    void allocateScreenDependentBuffers();
+    glm::uvec2 accumulationTextureSize() const;
+    std::unordered_map<std::string, std::optional<size_t>> drawListClearDefines() const;
+    std::unordered_map<std::string, std::optional<size_t>> debugVisualsDefines() const;
     void drawDebugOverlay(std::string const& text, glm::ivec2 offset);
 
     //build #define maps for the programs that require them

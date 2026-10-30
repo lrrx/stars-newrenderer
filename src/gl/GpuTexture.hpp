@@ -26,6 +26,10 @@ public:
 
     
     GLuint handle() const;
+    glm::uvec2 const& size() const { return mSize; }
+
+    //reallocates storage with the new size, keeping the same gl handle (contents become undefined)
+    void resize(glm::uvec2 const& newSize);
 
 private:
     glm::uvec2 mSize;
