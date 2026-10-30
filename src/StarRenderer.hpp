@@ -64,14 +64,14 @@ private: //framebuffers
     GpuTexture mAccumulationTexture; //for accumulating interleaved 32bit luminance-weighted temperature + 32 bit luminance
     GpuTexture mFrameTexture;
 private:
-    GLuint mGpuJobsSSBO; //TODOR: resort binding id order
-    GLuint mGpuDispatchHeaderSSBO;
-    GLuint mGpuAccumSSBO;
+    SSBO mGpuJobsSSBO; //TODOR: resort binding id order
+    SSBO mGpuDispatchHeaderSSBO;
+    SSBO mGpuAccumSSBO;
     SSBO mGpuChunkMetaSSBO;
     SSBO mGpuBatchRowsFlatSSBO;
     SSBO mGpuBatchRowsHighPrecisionFlatSSBO;
 
-    GLuint mGpuProfilingSSBO;
+    SSBO mGpuProfilingSSBO;
     GpuProfilingStruct mProfilingStruct{};
 
 private:

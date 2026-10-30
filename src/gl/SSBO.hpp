@@ -32,7 +32,7 @@ public:
 
     /** Create SSBO from CPU side data by uploading it to GPU, optionally create cache file */
     template<typename T>
-    void create(std::vector<T> const& data, GLenum usage, std::string const& cacheFilename = "") {
+    void allocateFromData(std::vector<T> const& data, GLenum usage, std::string const& cacheFilename = "") {
         static_assert(std::is_trivially_copyable_v<T>, "SSBO data must be trivially copyable");
         
         if(cacheFilename.length() > 0) {   
@@ -42,11 +42,21 @@ public:
             out.write(reinterpret_cast<const char*>(data.data()), data.size() * sizeof(T));
         }
 
-        mCount = data.size();
         cleanup();
+        mCount = data.size();
         GL.GenBuffers(1, &mHandle);
-        bind();
+        GL.BindBuffer(GL_SHADER_STORAGE_BUFFER, mHandle);
         GL.BufferData(GL_SHADER_STORAGE_BUFFER, data.size() * sizeof(T), data.data(), usage);
+    }
+
+    //TODO: distinguish size vs. count
+    void allocateEmpty(size_t size, GLenum usage) {
+
+        cleanup();
+        mCount = size;
+        GL.GenBuffers(1, &mHandle);
+        GL.BindBuffer(GL_SHADER_STORAGE_BUFFER, mHandle);
+        GL.BufferData(GL_SHADER_STORAGE_BUFFER, size, nullptr, usage);
     }
 
     size_t count() const {
@@ -95,7 +105,7 @@ public:
             throw std::runtime_error("Failed to read file data");
         }
 
-        create(data, usage);
+        allocateFromData(data, usage);
     }
 
 private:

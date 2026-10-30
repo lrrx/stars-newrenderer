@@ -21,7 +21,7 @@
 #include "preprocessing/gpu_datatypes.hpp"
 #include "preprocessing/preprocessing.hpp"
 
-#define REBUILD_CACHE
+//#define REBUILD_CACHE
 
 #ifdef REBUILD_CACHE
 #include "stars/stars.hpp"
@@ -118,9 +118,10 @@ mDebugVisualsProgram{"debugvisuals.comp", {
 void StarRenderer::preprocessStars(std::vector<RawStar> const& rawStars) {
     //TODOR: decide cache rebuild at runtime (by checking file date, size maybe) instead of compiletime ifdef
 #ifdef REBUILD_CACHE //TODOR: preprocessing csv -> .cache, .cache -> .bin all in cosmoscout, for user accessibility
-    std::vector<RawStar> const& rs = rawStars;
+    //std::vector<RawStar> const& rs = rawStars;
+    std::vector<RawStar> rs;
     ::newstar::log() << "reading cache" << std::endl;
-    //stars::readStarCache("full_gaia_stars_icrs.cache", rs, true);
+    stars::readStarCache("full_gaia_stars_icrs.cache", rs, true);
     ::newstar::log() << "rs.size() " << rs.size() << std::endl;
 
     std::vector<GpuChunkMeta> gpuChunkMetas;
@@ -128,9 +129,9 @@ void StarRenderer::preprocessStars(std::vector<RawStar> const& rawStars) {
     std::vector<uint32_t> gpuBatchRowsHighPrecisionFlat;
 
     preprocessing::run(rs, gpuChunkMetas, gpuBatchRowsFlat, gpuBatchRowsHighPrecisionFlat);    //upload data to GPU
-    mGpuChunkMetaSSBO.create(gpuChunkMetas, GL_STATIC_DRAW, "chunks_galactic.bin");
-    mGpuBatchRowsFlatSSBO.create(gpuBatchRowsFlat, GL_STATIC_DRAW, "rowsFlat_galactic.bin");
-    mGpuBatchRowsHighPrecisionFlatSSBO.create(gpuBatchRowsHighPrecisionFlat, GL_STATIC_DRAW, "rowsHighPrecisionFlat_galactic.bin");
+    mGpuChunkMetaSSBO.allocateFromData(gpuChunkMetas, GL_STATIC_DRAW, "chunks_galactic.bin");
+    mGpuBatchRowsFlatSSBO.allocateFromData(gpuBatchRowsFlat, GL_STATIC_DRAW, "rowsFlat_galactic.bin");
+    mGpuBatchRowsHighPrecisionFlatSSBO.allocateFromData(gpuBatchRowsHighPrecisionFlat, GL_STATIC_DRAW, "rowsHighPrecisionFlat_galactic.bin");
 
 #else
     mGpuChunkMetaSSBO.loadFromFile<GpuChunkMeta>("chunks_galactic.bin", GL_STATIC_DRAW);
@@ -143,32 +144,27 @@ void StarRenderer::preprocessStars(std::vector<RawStar> const& rawStars) {
 void StarRenderer::prepareGpuBuffers() {
     GL.GenVertexArrays(1, &mScreenQuadVAOHandle);
 
-    GL.GenBuffers(1, &mGpuDispatchHeaderSSBO);
-    GL.BindBuffer(GL_SHADER_STORAGE_BUFFER, mGpuDispatchHeaderSSBO);
-    // 16 B indirect-dispatch header (x,y,z,pad) + one tip pointer per primary tile.
-    // The binning shader uses dh.tip_pointers[tileID_flat] to find each tile's
-    // current write target, so the array must be sized to NUM_PRIMARY_TILES.
-    size_t headerBytes = 16 + mTileCount_flat * sizeof(uint32_t);
-    GL.BufferData(GL_SHADER_STORAGE_BUFFER, headerBytes, nullptr, GL_DYNAMIC_DRAW);
+    {    
+        // 16 B indirect-dispatch header (x,y,z,pad) + one tip pointer per primary tile.
+        // The binning shader uses dh.tip_pointers[tileID_flat] to find each tile's
+        // current write target, so the array must be sized to NUM_PRIMARY_TILES.
+        size_t headerBytes = 16 + mTileCount_flat * sizeof(uint32_t);
+        mGpuDispatchHeaderSSBO.allocateEmpty(headerBytes, GL_DYNAMIC_DRAW);
+    }
 
-    GL.GenBuffers(1, &mGpuJobsSSBO);
-    GL.BindBuffer(GL_SHADER_STORAGE_BUFFER, mGpuJobsSSBO);
     // Each Job = 16 B header (count, id_per_tile, tileID_flat, pad)
     //          + 16 B per ChunkMeta entry * GPU_MAX_JOB_CHUNKS.
-    size_t const jobStrideBytes = 16 + 16 * scfg_h::GPU_MAX_JOB_CHUNKS;
-    GL.BufferData(GL_SHADER_STORAGE_BUFFER,
-        jobStrideBytes * scfg_h::GPU_MAX_JOBS * 10,
-        nullptr, GL_DYNAMIC_COPY);
+    {
+        size_t const jobStrideBytes = 16 + 16 * scfg_h::GPU_MAX_JOB_CHUNKS;
+        mGpuJobsSSBO.allocateEmpty(jobStrideBytes * scfg_h::GPU_MAX_JOBS * 10, GL_DYNAMIC_COPY);
+    }
 
-    GL.GenBuffers(1, &mGpuProfilingSSBO);
-    GL.BindBuffer(GL_SHADER_STORAGE_BUFFER, mGpuProfilingSSBO);
-    GL.BufferData(GL_SHADER_STORAGE_BUFFER, sizeof(GpuProfilingStruct),
-                nullptr, GL_DYNAMIC_READ);
-
-    size_t accumElems = size_t(mScreenSize.x) * 2 * size_t(mScreenSize.y) * scfg_h::GPU_ACCUMULATION_LANES;
-    GL.GenBuffers(1, &mGpuAccumSSBO);
-    GL.BindBuffer(GL_SHADER_STORAGE_BUFFER, mGpuAccumSSBO);
-    GL.BufferData(GL_SHADER_STORAGE_BUFFER, accumElems * sizeof(int32_t), nullptr, GL_DYNAMIC_COPY);    
+    mGpuProfilingSSBO.allocateEmpty(sizeof(GpuProfilingStruct), GL_DYNAMIC_READ);
+    
+    {
+        size_t accumElems = size_t(mScreenSize.x) * 2 * size_t(mScreenSize.y) * scfg_h::GPU_ACCUMULATION_LANES;
+        mGpuAccumSSBO.allocateEmpty(accumElems * sizeof(int32_t), GL_DYNAMIC_COPY);    
+    }
 }
 
 void StarRenderer::run(
@@ -217,9 +213,9 @@ void StarRenderer::run(
         mGpuBatchRowsFlatSSBO.bind(0);
         mGpuBatchRowsHighPrecisionFlatSSBO.bind(6);
         mGpuChunkMetaSSBO.bind(1);
-        GL.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, mGpuJobsSSBO); //generated on-gpu (gpu-driven rendering)
-        GL.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 5, mGpuDispatchHeaderSSBO);
-        GL.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 7, mGpuAccumSSBO);
+        mGpuJobsSSBO.bind(2); //generated on-gpu (gpu-driven rendering)
+        mGpuDispatchHeaderSSBO.bind(5);
+        mGpuAccumSSBO.bind(7);
         sw.endTiming("bindings");
     }
 
@@ -254,11 +250,10 @@ void StarRenderer::run(
     }
 
     { // prepare profiling ssbo
-        GL.BindBuffer(GL_SHADER_STORAGE_BUFFER, mGpuProfilingSSBO);
+        mGpuProfilingSSBO.bind(4); //bind buffer + bind slot (meaning that we can access buffer data already)
         const uint32_t zero = 0;
         GL.ClearBufferData(GL_SHADER_STORAGE_BUFFER, GL_R32UI,
                         GL_RED_INTEGER, GL_UNSIGNED_INT, &zero);
-        GL.BindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, mGpuProfilingSSBO);
     }
 
     //// PASS: workload-per-tile overlay (toggle with B) ////
@@ -299,7 +294,7 @@ void StarRenderer::run(
         mRasterProgram.setFloat("uLuminanceMultiplicator", luminanceMultiplicator * mConfig.raster.DEBUG_LUMI_FACTOR);
 
         //indirect dispatch
-        GL.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, mGpuDispatchHeaderSSBO);
+        GL.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, mGpuDispatchHeaderSSBO.getID());
         GL.DispatchComputeIndirect(0);   // x/y/z read from offset 0 of the bound buffer
         GL.MemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -387,10 +382,7 @@ I DEBUG_OVERLAY_ENABLED
 }
 
 StarRenderer::~StarRenderer() {
-    GL.DeleteBuffers(1, &mGpuJobsSSBO);
-
     GL.DeleteVertexArrays(1, &mScreenQuadVAOHandle);
-
     GL.DeleteProgram(mScreenQuadProgram);
 }
 
