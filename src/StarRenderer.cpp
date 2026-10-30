@@ -316,7 +316,7 @@ void StarRenderer::run(
     {
         std::string debugString;
         generateDebugString(sw.getAllMeasurements(), mProfilingStruct, cameraPosParsec, debugString);
-        drawDebugOverlay(debugString, glm::ivec2{10, 30});
+        drawDebugOverlay(debugString, glm::ivec2{10, 500});
 
         std::string helpString = R"(KEYBOARD SHORTCUTS
 1 HIGH_LOD_PX_THRESHOLD *= 2
@@ -337,7 +337,7 @@ U ENABLE_LUMI_THRESHOLD
 L LUMI_THRESHOLD_ENABLED
 I DEBUG_OVERLAY_ENABLED
 )";
-        drawDebugOverlay(helpString, glm::ivec2{10, 600});
+        drawDebugOverlay(helpString, glm::ivec2{10, 1000});
     }
 
     //// PASS: final onscreen composition pass ////
