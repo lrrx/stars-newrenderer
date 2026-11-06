@@ -250,16 +250,6 @@ void StarRenderer::run(
     static GpuStopwatch sw{};
 
 
-    //// PASS: clear screen ////
-    {
-        sw.startTiming("clear");
-        mClearProgram.bind();
-        mClearProgram.setIVec2("uResolution", glm::ivec2{mScreenSize});
-        GL.DispatchCompute((mScreenSize.x + 7) / 8, (mScreenSize.y + 7) / 8, 1);
-        GL.MemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-        sw.endTiming("clear");
-    }
-
     //// SSBO BINDING ////
     {
         sw.startTiming("bindings");
@@ -270,6 +260,16 @@ void StarRenderer::run(
         mGpuDispatchHeaderSSBO.bind(5);
         mGpuAccumSSBO.bind(7);
         sw.endTiming("bindings");
+    }
+
+    //// PASS: clear screen ////
+    {
+        sw.startTiming("clear");
+        mClearProgram.bind();
+        mClearProgram.setIVec2("uResolution", glm::ivec2{mScreenSize});
+        GL.DispatchCompute((mScreenSize.x + 7) / 8, (mScreenSize.y + 7) / 8, 1);
+        GL.MemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        sw.endTiming("clear");
     }
 
     //// PASS: clear draw list ////
