@@ -33,7 +33,7 @@ void binStarsToChunks(std::vector<RawStar> const& raw_stars, std::unordered_map<
     std::unordered_map<uint32_t, RawChunk> chunksInternal;
     
     for(RawStar const& raw_star : raw_stars) {
-        glm::vec3 const globalChunkSpacePosition = raw_star.mPosition / scfg_h::CHUNK_SIZE_PARSECS;
+        glm::vec3 const globalChunkSpacePosition = raw_star.mPosition / scfg().CHUNK_SIZE_PARSECS;
         if(glm::length(globalChunkSpacePosition) < 0.0001) continue; //filter out "erroneous"(?) stars very close to center landing on 0,0,0, causing perf. spike
 
         glm::vec3 const chunkCoordFloored = glm::floor(globalChunkSpacePosition);

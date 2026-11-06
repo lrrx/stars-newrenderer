@@ -11,7 +11,7 @@
 #include <log/log.hpp>
 
 std::string loadFile(std::string const& name) {
-    std::string const path = newstar::staticGlobalConfig().SHADER_BASE_PATH + name;
+    std::string const path = newstar::scfg().SHADER_BASE_PATH + name;
 
     std::ifstream file(path);
     ::newstar::log() << "loading: " << path << std::endl;

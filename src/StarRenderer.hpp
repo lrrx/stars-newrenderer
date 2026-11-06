@@ -17,6 +17,12 @@
 
 namespace newstar {
 
+struct Viewport {
+    uint32_t id;
+    glm::uvec2 windowSize;
+    
+};
+
 void initialize();
 
 class StarRenderer {
