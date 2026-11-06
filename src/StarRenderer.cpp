@@ -268,7 +268,7 @@ void StarRenderer::run(
         mClearProgram.bind();
         mClearProgram.setIVec2("uResolution", glm::ivec2{mScreenSize});
         GL.DispatchCompute((mScreenSize.x + 7) / 8, (mScreenSize.y + 7) / 8, 1);
-        GL.MemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+        GL.MemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         sw.endTiming("clear");
     }
 
@@ -298,7 +298,7 @@ void StarRenderer::run(
         mDrawListProgram.setMat4("uViewProj", uViewProj);
         mDrawListProgram.setMat4("uInvP", uInvP);
         GL.DispatchCompute((mChunkCount + 63) / 64, 1, 1); //for each screentile
-        GL.MemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT);
+        GL.MemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT | GL_COMMAND_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         sw.endTiming("drawlist");
     }
 
@@ -349,8 +349,8 @@ void StarRenderer::run(
         //indirect dispatch
         GL.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, mGpuDispatchHeaderSSBO.getID());
         GL.DispatchComputeIndirect(0);   // x/y/z read from offset 0 of the bound buffer
-        GL.MemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
+        GL.MemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT
+                        | GL_TEXTURE_FETCH_BARRIER_BIT | GL_BUFFER_UPDATE_BARRIER_BIT);
         sw.endTiming("raster");
     }
 
@@ -450,7 +450,7 @@ void StarRenderer::drawDebugOverlay(std::string const& text, glm::ivec2 offset) 
     mDebugStatsProgram.setUint("uLineCount", 32u);
     mDebugStatsProgram.setUintArray("uLineChars", wordBuf.data(), DEBUG_TEXT_BUFFER_WORDS);
     GL.DispatchCompute(32, 1, 1); //one work group per line, one thread per char
-    GL.MemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    GL.MemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_TEXTURE_FETCH_BARRIER_BIT);
     GL.Disable(GL_DEPTH_TEST);
     GL.Clear(GL_COLOR_BUFFER_BIT);
 }
