@@ -4,6 +4,9 @@
 #include <string>
 #include <vector>
 #include <RawStar.hpp>
+#include <functional>
+
+using NewStarInjectedLoggerFunctionType = std::function<void(std::string const&)>;
 
 struct StarRendererConfig {
     glm::uvec2 screenResolution;
@@ -50,7 +53,9 @@ struct StarRendererConfig {
 };
 
 //TODOR: remove maybe since boilerplate? <-klären
-void newstarInit(glm::uvec2 const& screenSize, std::string const& shaderBasePath, std::string const& cacheBasePath);
+void newstarInit(glm::uvec2 const& screenSize, std::string const& shaderBasePath, std::string const& cacheBasePath,
+    NewStarInjectedLoggerFunctionType loggerFunction, NewStarInjectedLoggerFunctionType loggerErrorFunction
+);
 void newstarSetdata(std::vector<RawStar> const& rawStars);
 void newstarRender(
     glm::mat4 modelViewMatrix,

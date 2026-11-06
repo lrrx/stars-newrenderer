@@ -11,14 +11,15 @@
 std::unique_ptr<newstar::StarRenderer> starRenderer;
 
 //assumes that gl context already exists
-void newstarInit(glm::uvec2 const& screenSize, std::string const& shaderBasePath, std::string const& cacheBasePath) {
+void newstarInit(glm::uvec2 const& screenSize, std::string const& shaderBasePath, std::string const& cacheBasePath,
+NewStarInjectedLoggerFunctionType loggerFunction, NewStarInjectedLoggerFunctionType loggerErrorFunction) {
     newstar::initialize();
 
     newstar::initStaticGlobalConfig(newstar::StaticGlobalConfig(shaderBasePath, cacheBasePath));
 
     newstar::initializeLogState(
-        [](std::string const& s){std::cout << "[newstar] " << s << std::endl;},
-    [](std::string const& s){std::cout << "[newstar] " << s << std::endl;}
+        loggerFunction,
+        loggerErrorFunction
     );
 
     starRenderer = std::make_unique<newstar::StarRenderer>(screenSize);

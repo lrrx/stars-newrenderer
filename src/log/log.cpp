@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <memory>
+#include <streambuf>
 
 namespace {
 
@@ -9,18 +10,18 @@ namespace {
 class LogStreamBuf : public std::streambuf {
 public:
     LogStreamBuf() = delete;
-    explicit LogStreamBuf(InjectedLoggerFunctionType injectedLoggerFunction);
+    explicit LogStreamBuf(NewStarInjectedLoggerFunctionType injectedLoggerFunction);
 
 protected:
     int overflow(int ch) override;
 
     int sync() override;
     
-    InjectedLoggerFunctionType mInjectedLoggerFunction;
+    NewStarInjectedLoggerFunctionType mInjectedLoggerFunction;
     std::string mLineBuffer;
 };
 
-LogStreamBuf::LogStreamBuf(InjectedLoggerFunctionType injectedLoggerFunction) : mInjectedLoggerFunction(std::move(injectedLoggerFunction)){}
+LogStreamBuf::LogStreamBuf(NewStarInjectedLoggerFunctionType injectedLoggerFunction) : mInjectedLoggerFunction(std::move(injectedLoggerFunction)){}
 
 int LogStreamBuf::overflow(int ch) {
     if (ch != traits_type::eof()) {
@@ -46,7 +47,7 @@ int LogStreamBuf::sync() {
 //state "singleton"
 class LogState {
 public:
-    explicit LogState(InjectedLoggerFunctionType loggerFunction, InjectedLoggerFunctionType loggerErrorFunction);
+    explicit LogState(NewStarInjectedLoggerFunctionType loggerFunction, NewStarInjectedLoggerFunctionType loggerErrorFunction);
 
     std::ostream& log() { return mLogStream; }
     std::ostream& err() { return mErrStream; }
@@ -60,7 +61,7 @@ private:
 
 std::unique_ptr<LogState> logState;
 
-LogState::LogState(InjectedLoggerFunctionType loggerFunction, InjectedLoggerFunctionType loggerErrorFunction)
+LogState::LogState(NewStarInjectedLoggerFunctionType loggerFunction, NewStarInjectedLoggerFunctionType loggerErrorFunction)
         : mBufLog(std::move(loggerFunction)),
         mBufErr(std::move(loggerErrorFunction))
         , mLogStream(&mBufLog)
@@ -82,7 +83,7 @@ std::ostream& err()
     return logState->err();
 }
 
-void initializeLogState(InjectedLoggerFunctionType loggerFunction, InjectedLoggerFunctionType loggerErrorFunction) {
+void initializeLogState(NewStarInjectedLoggerFunctionType loggerFunction, NewStarInjectedLoggerFunctionType loggerErrorFunction) {
     logState = std::make_unique<LogState>(std::move(loggerFunction), std::move(loggerErrorFunction));
 }
 
