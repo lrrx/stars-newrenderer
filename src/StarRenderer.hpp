@@ -47,9 +47,7 @@ public:
         glm::mat4 modelViewMatrix,
         glm::mat4 inverseModelViewMatrix,
         glm::mat4 projectionMatrix,
-        glm::mat4 inverseProjectionMatrix,
-        float luminanceMultiplicator,
-        bool hdrEnabled
+        glm::mat4 inverseProjectionMatrix
     );
 
 private:

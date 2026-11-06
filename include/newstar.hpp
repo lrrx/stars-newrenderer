@@ -13,7 +13,8 @@ struct StarRendererConfig {
     size_t tileSizePx = 64;
 
     bool DEBUG_OVERLAY_ENABLED = false;
-            
+    float LUMINANCE_FACTOR = 3200.0;
+    bool HDR_ENABLED = false;
 
     struct ConfigDrawlist {
         //drawlist-------------
@@ -42,7 +43,6 @@ struct StarRendererConfig {
         bool WRITE_PROFILING_COUNTERS = true;
         bool ENABLE_LUMI_THRESHOLD = false;
         bool LUMI_THRESHOLD_ENABLED = false;
-        float DEBUG_LUMI_FACTOR = 32.0;
 
         bool operator==(const ConfigRaster& other) const = default;
 
@@ -52,7 +52,7 @@ struct StarRendererConfig {
     } raster;
 };
 
-//TODOR: remove maybe since boilerplate? <-klären
+
 void newstarInit(glm::uvec2 const& screenSize, std::string const& shaderBasePath, std::string const& cacheBasePath,
     NewStarInjectedLoggerFunctionType loggerFunction, NewStarInjectedLoggerFunctionType loggerErrorFunction
 );
@@ -61,11 +61,9 @@ void newstarRender(
     glm::mat4 modelViewMatrix,
     glm::mat4 inverseModelViewMatrix,
     glm::mat4 projectionMatrix,
-    glm::mat4 inverseProjectionMatrix,
-    float luminanceMultiplicator,
-    bool hdrEnabled);
+    glm::mat4 inverseProjectionMatrix);
 
-void newstarResizeWindow(glm::uvec2 windowSize);
+void newstarResizeScreen(glm::uvec2 screenSize);
 
 StarRendererConfig& newstarConfig();
 

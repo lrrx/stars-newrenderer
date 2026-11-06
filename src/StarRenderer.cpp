@@ -51,8 +51,8 @@ void initialize() {
 
 std::unordered_map<std::string, std::optional<size_t>> StarRenderer::drawListDefines() const {
     return {
-        {"MAX_JOB_CHUNKS", scfg().GPU_MAX_JOB_CHUNKS}, //TODOR: pass non-debug-code constants as uniforms to avoid recompilation on screen resize
-        {"TILE_SIZE", scfg().GPU_TILE_SIZE_PX}, //TODOR: compare performance between both approaches
+        {"MAX_JOB_CHUNKS", scfg().GPU_MAX_JOB_CHUNKS},
+        {"TILE_SIZE", scfg().GPU_TILE_SIZE_PX},
         {"NUM_PRIMARY_TILES", mTileCount_flat},
         {"TILES_X", mTileCount.x},
         {"TILES_Y", mTileCount.y},
@@ -67,7 +67,7 @@ std::unordered_map<std::string, std::optional<size_t>> StarRenderer::drawListDef
 
 std::unordered_map<std::string, std::optional<size_t>> StarRenderer::rasterDefines() const {
     return {
-        {"MAX_JOB_CHUNKS", scfg().GPU_MAX_JOB_CHUNKS}, //TODOR: pass non-debug-code constants as uniforms to avoid recompilation on screen resize
+        {"MAX_JOB_CHUNKS", scfg().GPU_MAX_JOB_CHUNKS},
         {"THREAD_COUNT", scfg_h::GPU_THREAD_COUNT},
         {"TILE_SIZE", scfg().GPU_TILE_SIZE_PX},
         {"TILES_X", mTileCount.x},
@@ -224,9 +224,7 @@ void StarRenderer::run(
     glm::mat4 modelViewMatrix,
     glm::mat4 inverseModelViewMatrix,
     glm::mat4 projectionMatrix,
-    glm::mat4 inverseProjectionMatrix,
-    float luminanceMultiplicator,
-    bool hdrEnabled) {  
+    glm::mat4 inverseProjectionMatrix) {  
     GL.Disable(GL_DEPTH_TEST);
     
     // calculate camera matrices
@@ -344,7 +342,7 @@ void StarRenderer::run(
         mRasterProgram.setUint("uStartLayer", 0u);
         mRasterProgram.setUint("uLayerCount", static_cast<uint32_t>(scfg().GPU_MAX_JOB_CHUNKS));
         //::newstar::log() << "newrenderer uniform: " << luminanceMultiplicator << std::endl;
-        mRasterProgram.setFloat("uLuminanceMultiplicator", luminanceMultiplicator * mConfig.raster.DEBUG_LUMI_FACTOR);
+        mRasterProgram.setFloat("uLuminanceMultiplicator", mConfig.LUMINANCE_FACTOR);
 
         //indirect dispatch
         GL.BindBuffer(GL_DISPATCH_INDIRECT_BUFFER, mGpuDispatchHeaderSSBO.getID());
@@ -385,8 +383,8 @@ B WORKLOAD_OVERLAY_ENABLED
 T RASTERIZE_USE_TILE_ACCUM
 P WRITE_PROFILING_COUNTERS
 U ENABLE_LUMI_THRESHOLD
-. DEBUG_LUMI_FACTOR *= 5.0;
-; DEBUG_LUMI_FACTOR /= 5.0;
+. LUMINANCE_FACTOR *= 5.0;
+; LUMINANCE_FACTOR /= 5.0;
 L LUMI_THRESHOLD_ENABLED
 I DEBUG_OVERLAY_ENABLED
 )";
@@ -404,7 +402,7 @@ I DEBUG_OVERLAY_ENABLED
         GL.BindTexture(GL_TEXTURE_2D, mAccumulationTexture.handle());
         GL.ProgramUniform2i(mScreenQuadProgram, uniforms.uResolution, mScreenSize.x, mScreenSize.y);
         GL.ProgramUniform1i(mScreenQuadProgram, uniforms.uAccumulationTex, 0);
-        GL.ProgramUniform1f(mScreenQuadProgram, uniforms.uHdrEnabled, hdrEnabled);
+        GL.ProgramUniform1f(mScreenQuadProgram, uniforms.uHdrEnabled, mConfig.HDR_ENABLED);
         
         GL.ActiveTexture(GL_TEXTURE1);
         GL.BindTexture(GL_TEXTURE_2D, mFrameTexture.handle());

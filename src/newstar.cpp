@@ -11,7 +11,7 @@
 std::unique_ptr<newstar::StarRenderer> starRenderer;
 
 //assumes that gl context already exists
-void newstarInit(glm::uvec2 const& screenSize, std::string const& shaderBasePath, std::string const& cacheBasePath,
+void newstarInit(glm::uvec2 const& viewportSize, std::string const& shaderBasePath, std::string const& cacheBasePath,
 NewStarInjectedLoggerFunctionType loggerFunction, NewStarInjectedLoggerFunctionType loggerErrorFunction) {
     newstar::initialize();
 
@@ -22,7 +22,7 @@ NewStarInjectedLoggerFunctionType loggerFunction, NewStarInjectedLoggerFunctionT
         loggerErrorFunction
     );
 
-    starRenderer = std::make_unique<newstar::StarRenderer>(screenSize);
+    starRenderer = std::make_unique<newstar::StarRenderer>(viewportSize);
 }
 
 void newstarSetdata(std::vector<RawStar> const& rawStars) {
@@ -34,24 +34,20 @@ void newstarRender(
     glm::mat4 modelViewMatrix,
     glm::mat4 inverseModelViewMatrix,
     glm::mat4 projectionMatrix,
-    glm::mat4 inverseProjectionMatrix,
-    float luminanceMultiplicator,
-    bool hdrEnabled
+    glm::mat4 inverseProjectionMatrix
 ) {
 
     starRenderer->run(
         modelViewMatrix,
         inverseModelViewMatrix,
         projectionMatrix,
-        inverseProjectionMatrix,
-        luminanceMultiplicator,
-        hdrEnabled);
+        inverseProjectionMatrix);
 }
 
-void newstarResizeWindow(
-    glm::uvec2 windowSize
+void newstarResizeScreen(
+    glm::uvec2 screenSize
 ) {
-    starRenderer->resize(windowSize);
+    starRenderer->resize(screenSize);
 }
 
 StarRendererConfig& newstarConfig() {
